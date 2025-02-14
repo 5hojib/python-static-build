@@ -1,6 +1,13 @@
 # Dockerfile
 FROM ubuntu:20.04 AS builder
 
+# Set non-interactive frontend for apt to avoid tzdata prompt
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Preconfigure tzdata
+RUN echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections && \
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+
 # Install dependencies
 RUN apt-get update && \
     apt-get install -y \
