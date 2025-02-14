@@ -1,3 +1,4 @@
+# Multi-Arch Static Python Build (Fixed)
 FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS builder
 
 WORKDIR /python-build
@@ -29,14 +30,17 @@ RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VER
 
 WORKDIR /python-build/Python-${PYTHON_VERSION}
 
-# Configure Python for static build
+# Fix: Explicitly set build and host triplets
 RUN ./configure \
     --prefix=/opt/python-static \
     --enable-optimizations \
     --disable-ipv6 \
     --enable-loadable-sqlite-extensions \
+    --without-ensurepip \
     --disable-gil \
     --enable-experimental-jit \
+    --build=x86_64-linux-gnu \
+    --host=x86_64-linux-musl \
     CC=musl-gcc \
     CFLAGS="-static" \
     LDFLAGS="-static"
