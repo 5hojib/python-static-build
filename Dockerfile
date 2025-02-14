@@ -20,7 +20,7 @@ RUN apt update && apt install -y \
     bash
 
 # Set Python version
-ENV PYTHON_VERSION=3.12.0
+ENV PYTHON_VERSION=3.13.2
 
 # Download and extract Python source
 RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz && \
