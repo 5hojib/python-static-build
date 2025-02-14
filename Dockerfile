@@ -27,7 +27,7 @@ RUN apt-get update && \
     libffi-dev \
     wget \
     git \
-    python3.13 \  # Install a minimal Python interpreter
+    python3.13 \
     libpython3.13 \
     && rm -rf /var/lib/apt/lists/*
 
