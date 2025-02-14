@@ -1,57 +1,52 @@
-# Multi-Arch Static Python Build (Fixed)
-FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS builder
-
-WORKDIR /python-build
+# Dockerfile
+FROM ubuntu:20.04 AS builder
 
 # Install dependencies
-RUN apt update && apt install -y \
+RUN apt-get update && \
+    apt-get install -y \
     build-essential \
-    musl-dev \
-    musl-tools \
-    zlib1g-dev \
-    libbz2-dev \
-    libsqlite3-dev \
     libssl-dev \
-    libffi-dev \
+    zlib1g-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
     libreadline-dev \
+    libsqlite3-dev \
+    libgdbm-dev \
+    libdb5.3-dev \
+    libbz2-dev \
+    libexpat1-dev \
     liblzma-dev \
+    tk-dev \
+    libffi-dev \
     wget \
-    curl \
     git \
-    bash
-
-# Set Python version
-ENV PYTHON_VERSION=3.13.2
+    && rm -rf /var/lib/apt/lists/*
 
 # Download and extract Python source
-RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz && \
-    tar -xf Python-${PYTHON_VERSION}.tar.xz && \
-    rm -f Python-${PYTHON_VERSION}.tar.xz
+ARG PYTHON_VERSION=3.13.2
+RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz && \
+    tar -xzf Python-${PYTHON_VERSION}.tgz && \
+    rm Python-${PYTHON_VERSION}.tgz
 
-WORKDIR /python-build/Python-${PYTHON_VERSION}
-
-# Fix: Explicitly set build and host triplets
+# Build Python with custom configurations
+WORKDIR /Python-${PYTHON_VERSION}
 RUN ./configure \
-    --prefix=/opt/python-static \
     --enable-optimizations \
-    --disable-ipv6 \
-    --enable-loadable-sqlite-extensions \
-    --without-ensurepip \
+    --enable-shared \
     --disable-gil \
-    --enable-experimental-jit \
-    --build=x86_64-linux-gnu \
-    --host=x86_64-linux-musl \
-    CC=musl-gcc \
-    CFLAGS="-static" \
-    LDFLAGS="-static"
+    --enable-experimental-jit && \
+    make -j$(nproc) && \
+    make install
 
-# Compile and install
-RUN make -j$(nproc) && make install
+# Create a static binary
+RUN mkdir /python-static && \
+    cp -r /usr/local/bin/python3 /python-static/ && \
+    cp -r /usr/local/lib/libpython3.* /python-static/
 
-# Strip binary to reduce size
-RUN strip /opt/python-static/bin/python3
+# Archive the static binary
+WORKDIR /python-static
+RUN tar -czf python-${PYTHON_VERSION}-static-$(uname -m).tar.gz *
 
-# Final minimal image
-FROM scratch AS final
-COPY --from=builder /opt/python-static/bin/python3 /usr/bin/python3
-ENTRYPOINT ["/usr/bin/python3"]
+# Output the archive
+VOLUME /output
+CMD cp python-${PYTHON_VERSION}-static-$(uname -m).tar.gz /output/
