@@ -1,0 +1,47 @@
+name: Build and Upload Multi-Arch Static Python
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Create multi-arch build
+        run: |
+          docker buildx create --use
+          docker buildx build \
+            --platform linux/amd64,linux/arm64,linux/arm/v7 \
+            -t python-static:latest \
+            --output type=local,dest=./output \
+            .
+
+      - name: Rename binaries
+        run: |
+          mv output/usr/bin/python3 python3-amd64
+          mv output-arm64/usr/bin/python3 python3-arm64
+          mv output-armv7/usr/bin/python3 python3-armv7
+          chmod +x python3-*
+
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            python3-amd64
+            python3-arm64
+            python3-armv7
+          tag_name: latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GX_TOKEN }}
