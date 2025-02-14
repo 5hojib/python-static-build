@@ -1,32 +1,26 @@
-# Use Alpine as the base for static linking
-FROM alpine:latest AS builder
+FROM --platform=$BUILDPLATFORM ubuntu:22.04 AS builder
 
 WORKDIR /python-build
 
-# Install required dependencies
-RUN apk add --no-cache \
-    build-base \
+# Install dependencies
+RUN apt update && apt install -y \
+    build-essential \
     musl-dev \
-    musl-utils \
-    linux-headers \
-    zlib-dev \
-    bzip2-dev \
-    xz-dev \
-    ncurses-dev \
-    readline-dev \
-    sqlite-dev \
-    openssl-dev \
+    musl-tools \
+    zlib1g-dev \
+    libbz2-dev \
+    libsqlite3-dev \
+    libssl-dev \
     libffi-dev \
-    libressl-dev \
-    tcl-dev \
-    tk-dev \
+    libreadline-dev \
+    liblzma-dev \
     wget \
     curl \
     git \
     bash
 
-# Define Python version
-ENV PYTHON_VERSION=3.13.2
+# Set Python version
+ENV PYTHON_VERSION=3.12.0
 
 # Download and extract Python source
 RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz && \
@@ -35,30 +29,25 @@ RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VER
 
 WORKDIR /python-build/Python-${PYTHON_VERSION}
 
-# Configure for static build
+# Configure Python for static build
 RUN ./configure \
     --prefix=/opt/python-static \
     --enable-optimizations \
-    --enable-shared \
     --disable-ipv6 \
-    --with-ensurepip=install \
+    --enable-loadable-sqlite-extensions \
     --disable-gil \
     --enable-experimental-jit \
-    LDFLAGS="-static" \
-    CFLAGS="-static -static-libgcc -static-libstdc++"
+    CC=musl-gcc \
+    CFLAGS="-static" \
+    LDFLAGS="-static"
 
 # Compile and install
 RUN make -j$(nproc) && make install
 
-# Install staticx and create static binary
-RUN apk add --no-cache python3 py3-pip && \
-    pip3 install staticx && \
-    staticx /opt/python-static/bin/python3 /opt/python-static/python3-static
+# Strip binary to reduce size
+RUN strip /opt/python-static/bin/python3
 
-# Reduce binary size
-RUN strip /opt/python-static/python3-static
-
-# Copy the static binary for final use
+# Final minimal image
 FROM scratch AS final
-COPY --from=builder /opt/python-static/python3-static /usr/bin/python3
+COPY --from=builder /opt/python-static/bin/python3 /usr/bin/python3
 ENTRYPOINT ["/usr/bin/python3"]

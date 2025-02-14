@@ -13,13 +13,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up QEMU
+      - name: Set up QEMU for multi-arch builds
         uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Create multi-arch build
+      - name: Build static Python for multiple architectures
         run: |
           docker buildx create --use
           docker buildx build \
