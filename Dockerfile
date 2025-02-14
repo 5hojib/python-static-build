@@ -1,5 +1,5 @@
 # Dockerfile
-FROM ubuntu:20.04 AS builder
+FROM ubuntu:25.04 AS builder
 
 # Set non-interactive frontend for apt to avoid tzdata prompt
 ENV DEBIAN_FRONTEND=noninteractive
@@ -27,6 +27,8 @@ RUN apt-get update && \
     libffi-dev \
     wget \
     git \
+    python3.13 \  # Install a minimal Python interpreter
+    libpython3.13 \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and extract Python source
